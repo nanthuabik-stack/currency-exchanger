@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Real-Time Currency Converter</title>
+    <style>
+       /* Modern, Financial-Themed Color Palette */
+:root {
+    --color-primary: #007bff;
+    --color-secondary: #28a745;
+    --color-background: #f0f8ff;
+    --color-card-bg: #ffffff;
+    --color-text-dark: #333333;
+    --color-success: #17a2b8;
+    --gradient-button: linear-gradient(to right, #28a745, #218838);
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: var(--color-background);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><defs><pattern id="p" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="%23f0f0f0" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23p)"/></svg>');
+    background-size: cover;
+    animation: backgroundFade 15s infinite alternate;
+    padding: 20px;
+}
+
+@keyframes backgroundFade {
+    from { background-color: #f0f8ff; }
+    to { background-color: #e6f3ff; }
+}
+
+.converter-container {
+    background: var(--color-card-bg);
+    padding: 40px 30px;
+    border-radius: 20px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 500px;
+    border: 1px solid #ddd;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    position: relative;
+}
+
+.converter-container:hover {
+    transform: translateY(-7px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+h2 {
+    text-align: center;
+    color: var(--color-primary);
+    margin-bottom: 25px;
+    font-size: 2.2em;
+    border-bottom: 3px solid var(--color-secondary);
+    padding-bottom: 10px;
+    letter-spacing: 1.2px;
+}
+
+.input-group, .select-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--color-text-dark);
+    font-size: 1.05em;
+}
+
+input[type="number"], select {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    font-size: 1.1em;
+    transition: all 0.3s;
+    background-color: #fdfdfd;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+input[type="number"]:focus, select:focus {
+    border-color: var(--color-secondary);
+    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.15);
+    outline: none;
+}
+
+.convert-btn {
+    width: 100%;
+    padding: 15px;
+    background: var(--gradient-button);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.convert-btn:hover:not([disabled]) {
+    background: linear-gradient(to right, #218838, #1e7e34);
+    transform: scale(1.02);
+}
+
+.convert-btn:disabled {
+    background-color: #a0dba0;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.result {
+    margin-top: 30px;
+    padding: 20px;
+    border: 2px solid var(--color-success);
+    border-radius: 12px;
+    background-color: #e8f9fb;
+    text-align: center;
+    font-size: 1.5em;
+    color: var(--color-text-dark);
+    font-weight: 500;
+    min-height: 60px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.result strong {
+    color: var(--color-success);
+    font-weight: 700;
+}
+
+.warning {
+    color: var(--color-primary);
+    font-weight: bold;
+    text-align: center;
+    font-size: 0.9em;
+    margin-top: -10px;
+    margin-bottom: 20px;
+    padding: 7px;
+    background-color: #e0f4ff;
+    border-radius: 7px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+    </style>
+</head>
+<body>
+
+<div class="converter-container">
+    <h2>Currency Exchange 💰</h2>
+    <div class="warning" id="rateStatus">Loading real-time rates...</div>
+
+    <div class="input-group">
+        <label for="amount">Amount:</label>
+        <input type="number" id="amount" value="100" min="1" step="any">
+    </div>
+
+    <div class="select-group">
+        <label for="fromCurrency">From Currency:</label>
+        <select id="fromCurrency"></select>
+    </div>
+
+    <div class="select-group">
+        <label for="toCurrency">To Currency:</label>
+        <select id="toCurrency"></select>
+    </div>
+
+    <button class="convert-btn" onclick="convertCurrency()" disabled id="convertBtn">Convert Now</button>
+
+    <div class="result" id="conversionResult">Rates loading...</div>
+</div>
+
+<script>
+    const API_URL = 'https://open.er-api.com/v6/latest/USD';
+    let exchangeRates = {};
+
+    const fromCurrencySelect = document.getElementById('fromCurrency');
+    const toCurrencySelect = document.getElementById('toCurrency');
+    const amountInput = document.getElementById('amount');
+    const resultDiv = document.getElementById('conversionResult');
+    const statusDiv = document.getElementById('rateStatus');
+    const convertBtn = document.getElementById('convertBtn');
+
+    async function fetchRates() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            
+            exchangeRates = data.rates;
+            statusDiv.innerHTML = `✅ **Real-Time Rates** updated: ${new Date(data.time_last_update_utc).toLocaleTimeString()}`;
+            convertBtn.disabled = false;
+            resultDiv.textContent = "Rates loaded. Select currencies and click 'Convert Now'.";
+
+            populateCurrencies();
+        } catch (error) {
+            console.error("Error fetching exchange rates:", error);
+            statusDiv.innerHTML = '❌ **API Failed.** Using static fallback rates.';
+            // Fallback rates
+            exchangeRates = { 'USD': 1.00, 'EUR': 0.92, 'JPY': 156.45, 'GBP': 0.79, 'INR': 83.45, 'CAD': 1.36, 'AUD': 1.51 };
+            populateCurrencies();
+            convertBtn.disabled = false;
+            resultDiv.textContent = "Using fallback rates.";
+        }
+    }
+
+    function populateCurrencies() {
+        const currencies = Object.keys(exchangeRates).sort();
+        
+        fromCurrencySelect.innerHTML = '';
+        toCurrencySelect.innerHTML = '';
+
+        currencies.forEach(currency => {
+            const fromOption = new Option(currency, currency);
+            fromCurrencySelect.appendChild(fromOption);
+            
+            const toOption = new Option(currency, currency);
+            toCurrencySelect.appendChild(toOption);
+        });
+
+        fromCurrencySelect.value = 'USD'; 
+        toCurrencySelect.value = 'INR'; 
+    }
+
+    function convertCurrency() {
+        const amount = parseFloat(amountInput.value);
+        const from = fromCurrencySelect.value;
+        const to = toCurrencySelect.value;
+
+        if (isNaN(amount) || amount <= 0) {
+            resultDiv.innerHTML = '<p style="color:red; font-weight:bold;">Please enter a valid positive amount.</p>';
+            return;
+        }
+
+        const rateFrom = exchangeRates[from];
+        const rateTo = exchangeRates[to];
+        
+        if (!rateFrom || !rateTo) {
+            resultDiv.innerHTML = '<p style="color:red; font-weight:bold;">Error: Rate data missing for selected currency.</p>';
+            return;
+        }
+
+        const conversionRate = rateTo / rateFrom;
+        const convertedAmount = amount * conversionRate;
+        
+        const formattedResult = convertedAmount.toFixed(2);
+
+        resultDiv.innerHTML = `<strong>${amount.toFixed(2)} ${from}</strong> is equal to <strong style="color: var(--color-success);">${formattedResult} ${to}</strong>`;
+    }
+
+    window.onload = fetchRates;
+</script>
+
+</body>
+</html>
